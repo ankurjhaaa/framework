@@ -1,0 +1,17 @@
+{
+    "name": "echovel/framework",
+    "description": "The KitePHP Framework Core",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kite\\Core\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    }
+}
