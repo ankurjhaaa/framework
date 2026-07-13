@@ -1,8 +1,16 @@
 {
     "name": "echovel/framework",
+    "version": "0.0.2",
     "description": "The KitePHP Framework Core",
+    "keywords": ["framework", "php", "echovel", "core"],
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Ankur Jha",
+            "email": "ankur@echovel.com"
+        }
+    ],
     "require": {
         "php": "^8.0"
     },
