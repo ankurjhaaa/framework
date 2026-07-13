@@ -94,4 +94,88 @@ class Auth
     {
         return Session::instance()->get('auth_user_id');
     }
+
+    // --- Role-Based Access Control (RBAC) ---
+
+    protected static ?array $permissions = null;
+    protected static ?array $groups = null;
+
+    /**
+     * Check if the authenticated user has a specific permission.
+     * Django-style architecture.
+     */
+    public static function hasPerm(string $permission): bool
+    {
+        $user = self::user();
+        if (!$user) return false;
+
+        // Superusers have all permissions
+        if (isset($user->is_superuser) && $user->is_superuser) return true;
+
+        if (self::$permissions === null) {
+            self::$permissions = self::fetchUserPermissions($user->id);
+        }
+
+        return in_array($permission, self::$permissions);
+    }
+
+    /**
+     * Check if the authenticated user belongs to a specific group.
+     */
+    public static function inGroup(string $groupName): bool
+    {
+        $user = self::user();
+        if (!$user) return false;
+
+        // Superusers are considered part of all groups for access purposes
+        if (isset($user->is_superuser) && $user->is_superuser) return true;
+
+        if (self::$groups === null) {
+            $groups = db('auth_groups')
+                ->select('auth_groups.name')
+                ->join('auth_user_groups', 'auth_user_groups.group_id = auth_groups.id')
+                ->where('auth_user_groups.user_id', $user->id)
+                ->get();
+                
+            self::$groups = [];
+            foreach ($groups as $g) {
+                self::$groups[] = $g->name;
+            }
+        }
+
+        return in_array($groupName, self::$groups);
+    }
+
+    /**
+     * Fetch all direct and group permissions for a user from the database.
+     */
+    protected static function fetchUserPermissions($userId): array
+    {
+        $perms = [];
+        
+        // 1. Direct user permissions
+        $direct = db('auth_permissions')
+            ->select('auth_permissions.codename')
+            ->join('auth_user_permissions', 'auth_user_permissions.permission_id = auth_permissions.id')
+            ->where('auth_user_permissions.user_id', $userId)
+            ->get();
+            
+        foreach ($direct as $p) {
+            $perms[] = $p->codename;
+        }
+
+        // 2. Group permissions
+        $group = db('auth_permissions')
+            ->select('auth_permissions.codename')
+            ->join('auth_group_permissions', 'auth_group_permissions.permission_id = auth_permissions.id')
+            ->join('auth_user_groups', 'auth_user_groups.group_id = auth_group_permissions.group_id')
+            ->where('auth_user_groups.user_id', $userId)
+            ->get();
+            
+        foreach ($group as $p) {
+            $perms[] = $p->codename;
+        }
+
+        return array_unique($perms);
+    }
 }

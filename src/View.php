@@ -166,6 +166,10 @@ class View
             $content = preg_replace('/@error\s*\((.*?)\)/', '<?php if ($message = errors($1)): ?>', $content);
             $content = preg_replace('/@enderror/', '<?php endif; ?>', $content);
             
+            // Compile RBAC Directives
+            $content = preg_replace('/@can\s*\((.*?)\)/', '<?php if (auth()->hasPerm($1)): ?>', $content);
+            $content = preg_replace('/@endcan/', '<?php endif; ?>', $content);
+            
             // Compile built-in helpers
             $content = preg_replace('/@csrf/', '<?php echo csrf(); ?>', $content);
 

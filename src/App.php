@@ -82,6 +82,7 @@ class App
         // 4. Register core Global Middlewares & Aliases
         Router::addGlobalMiddleware(\Kite\Core\Middleware\VerifyCsrfToken::class);
         Router::aliasMiddleware('auth', \Kite\Core\Middleware\Authenticate::class);
+        Router::aliasMiddleware('permission', \Kite\Core\Middleware\Permission::class);
 
         // 5. Load the user-defined route files
         $this->loadRoutes();

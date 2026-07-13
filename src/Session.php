@@ -78,6 +78,15 @@ class Session
     }
 
     /**
+     * Remove a value from the session.
+     */
+    public function forget(string $key): void
+    {
+        self::instance();
+        unset($_SESSION[$key]);
+    }
+
+    /**
      * Store a "flash" message in the session.
      * Flash messages are typically only meant to survive for a single subsequent request 
      * (e.g., "Item saved successfully!").

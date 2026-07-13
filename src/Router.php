@@ -199,14 +199,22 @@ class Router
                     array_reverse($middlewares), 
                     function($next, $middleware) {
                         return function($request) use ($next, $middleware) {
-                            $middlewareClass = self::$middlewareAliases[$middleware] ?? $middleware;
+                            $args = [];
+                            if (strpos($middleware, ':') !== false) {
+                                list($middlewareName, $argString) = explode(':', $middleware, 2);
+                                $args = explode(',', $argString);
+                            } else {
+                                $middlewareName = $middleware;
+                            }
+
+                            $middlewareClass = self::$middlewareAliases[$middlewareName] ?? $middlewareName;
                             
                             if (!class_exists($middlewareClass)) {
-                                abort(500, "Middleware [{$middleware}] not found.");
+                                abort(500, "Middleware [{$middlewareName}] not found.");
                             }
                             
                             $instance = new $middlewareClass();
-                            return $instance->handle($request, $next);
+                            return $instance->handle($request, $next, ...$args);
                         };
                     }, 
                     function($request) use ($route, $parameters) {
