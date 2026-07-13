@@ -17,6 +17,10 @@ class Router
     // Variables for route grouping (Prefixes and Middleware)
     protected static string $currentGroupPrefix = '';
     protected static array $currentGroupMiddleware = [];
+    
+    // Global and Alias Middleware configuration
+    protected static array $globalMiddleware = [];
+    protected static array $middlewareAliases = [];
 
     /**
      * Register a GET route.
@@ -51,6 +55,22 @@ class Router
     }
 
     /**
+     * Register a Global Middleware (runs on every request).
+     */
+    public static function addGlobalMiddleware(string $class)
+    {
+        self::$globalMiddleware[] = $class;
+    }
+
+    /**
+     * Register a Middleware Alias (e.g. 'auth' => \App\Middleware\Auth::class).
+     */
+    public static function aliasMiddleware(string $alias, string $class)
+    {
+        self::$middlewareAliases[$alias] = $class;
+    }
+
+    /**
      * Internal method to add a route to the collection.
      * It handles grouping prefixes and returns an anonymous class to allow method chaining (e.g., ->name('route_name')).
      */
@@ -76,7 +96,7 @@ class Router
         // Get the index of the newly added route so we can modify it via chaining
         $routeIndex = count(self::$routes) - 1;
 
-        // Return an anonymous class to enable method chaining, specifically for naming the route
+        // Return an anonymous class to enable method chaining
         return new class($routeIndex) {
             private int $index;
             public function __construct(int $index) { $this->index = $index; }
@@ -84,6 +104,12 @@ class Router
             // Assigns a name to the route
             public function name(string $name) {
                 Router::nameRoute($this->index, $name);
+                return $this;
+            }
+
+            // Assigns middleware to the single route
+            public function middleware($middleware) {
+                Router::addRouteMiddleware($this->index, $middleware);
                 return $this;
             }
         };
@@ -97,6 +123,17 @@ class Router
         if (isset(self::$routes[$index])) {
             self::$routes[$index]['name'] = $name;
             self::$namedRoutes[$name] = self::$routes[$index]['uri'];
+        }
+    }
+
+    /**
+     * Add middleware to a specific route index.
+     */
+    public static function addRouteMiddleware(int $index, $middleware)
+    {
+        if (isset(self::$routes[$index])) {
+            $middlewares = is_array($middleware) ? $middleware : [$middleware];
+            self::$routes[$index]['middleware'] = array_merge(self::$routes[$index]['middleware'], $middlewares);
         }
     }
 
@@ -155,8 +192,30 @@ class Router
                     }
                 }
 
-                // Execute the route action (Controller or Closure)
-                $response = self::execute($route['action'], $parameters, $request);
+                // Build the Middleware Pipeline
+                $middlewares = array_merge(self::$globalMiddleware, $route['middleware']);
+                
+                $pipeline = array_reduce(
+                    array_reverse($middlewares), 
+                    function($next, $middleware) {
+                        return function($request) use ($next, $middleware) {
+                            $middlewareClass = self::$middlewareAliases[$middleware] ?? $middleware;
+                            
+                            if (!class_exists($middlewareClass)) {
+                                abort(500, "Middleware [{$middleware}] not found.");
+                            }
+                            
+                            $instance = new $middlewareClass();
+                            return $instance->handle($request, $next);
+                        };
+                    }, 
+                    function($request) use ($route, $parameters) {
+                        return self::execute($route['action'], $parameters, $request);
+                    }
+                );
+
+                // Execute the Pipeline
+                $response = $pipeline($request);
                 
                 // If the action returned a proper Response object, return it to the App
                 if ($response instanceof Response) {

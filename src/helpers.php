@@ -228,25 +228,33 @@ if (!function_exists('e')) {
 
 if (!function_exists('seo')) {
     /**
-     * Generate standard SEO meta tags (Title, Description, Canonical).
+     * Access the Auto-SEO Engine.
      */
-    function seo(array $data)
+    function seo()
     {
-        $html = '';
-        if (isset($data['title'])) {
-            $html .= '<title>' . e($data['title']) . '</title>' . PHP_EOL;
-            $html .= '<meta property="og:title" content="' . e($data['title']) . '">' . PHP_EOL;
-            $html .= '<meta name="twitter:title" content="' . e($data['title']) . '">' . PHP_EOL;
-        }
-        if (isset($data['description'])) {
-            $html .= '<meta name="description" content="' . e($data['description']) . '">' . PHP_EOL;
-            $html .= '<meta property="og:description" content="' . e($data['description']) . '">' . PHP_EOL;
-            $html .= '<meta name="twitter:description" content="' . e($data['description']) . '">' . PHP_EOL;
-        }
-        if (isset($data['canonical'])) {
-            $html .= '<link rel="canonical" href="' . e($data['canonical']) . '">' . PHP_EOL;
-            $html .= '<meta property="og:url" content="' . e($data['canonical']) . '">' . PHP_EOL;
-        }
-        return $html;
+        return \Kite\Core\Seo::instance();
     }
 }
+
+if (!function_exists('auth')) {
+    /**
+     * Get the currently authenticated user, or the Auth engine itself if no method is called.
+     * Example: auth()->check(), auth()->user(), auth()->attempt()
+     */
+    function auth()
+    {
+        return new class {
+            public function __call($method, $args)
+            {
+                return \Kite\Core\Auth::$method(...$args);
+            }
+            public function user() { return \Kite\Core\Auth::user(); }
+            public function check() { return \Kite\Core\Auth::check(); }
+            public function id() { return \Kite\Core\Auth::id(); }
+            public function attempt(array $credentials) { return \Kite\Core\Auth::attempt($credentials); }
+            public function login($user) { return \Kite\Core\Auth::login($user); }
+            public function logout() { return \Kite\Core\Auth::logout(); }
+        };
+    }
+}
+

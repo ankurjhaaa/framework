@@ -154,6 +154,14 @@ class View
             $content = preg_replace('/@endsection/', '<?php \Kite\Core\View::endSection(); ?>', $content);
             $content = preg_replace('/@yield\s*\((.*?)\)/', '<?php \Kite\Core\View::yieldSection($1); ?>', $content);
             
+            // Compile Include / Component Directives
+            // Allows: @include('components.card', ['title' => 'Hello'])
+            $content = preg_replace('/@include\s*\((.*?)\)/', '<?php \Kite\Core\View::component($1); ?>', $content);
+            
+            // Compile SEO Directives
+            // Allows: @seo('title', 'Page Name')
+            $content = preg_replace('/@seo\s*\(\s*[\'"]([a-zA-Z0-9_]+)[\'"]\s*,\s*(.*?)\)/', '<?php seo()->$1($2); ?>', $content);
+            
             // Compile Error Directives
             $content = preg_replace('/@error\s*\((.*?)\)/', '<?php if ($message = errors($1)): ?>', $content);
             $content = preg_replace('/@enderror/', '<?php endif; ?>', $content);
